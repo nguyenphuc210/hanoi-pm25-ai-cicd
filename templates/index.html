@@ -326,9 +326,9 @@
 </head>
 <body>
 
-    <!-- SIDEBAR: CONTROL PANEL -->
+    <!-- SIDEBAR: MLOPS CONFIGURATION -->
     <div class="sidebar">
-        <h2>⚙️ Control Panel</h2>
+        <h2>⚙️ MLOps Configuration</h2>
         
         <div class="config-group">
             <label>Model Architecture</label>
@@ -360,6 +360,16 @@
         <div class="config-group" id="uploadGroup" style="display: none;">
             <label>Upload Dataset (.csv)</label>
             <input type="file" id="csvFileInput" accept=".csv">
+        </div>
+
+        <div class="hyperparameters">
+            <div class="hp-header">HYPERPARAMETERS (MODEL)</div>
+            <div class="hp-row"><span class="hp-label">Sequence (T)</span><span class="hp-val">96 hours</span></div>
+            <div class="hp-row"><span class="hp-label">Horizon (H)</span><span class="hp-val">24 hours</span></div>
+            <div class="hp-row"><span class="hp-label">Features (C)</span><span class="hp-val">7 (MS)</span></div>
+            <div class="hp-row"><span class="hp-label">Stride (S)</span><span class="hp-val">1 hour</span></div>
+            <div class="hp-row"><span class="hp-label">Loss Function</span><span class="hp-val">MSE + L1</span></div>
+            <div class="hp-row"><span class="hp-label">Encoder Backbone</span><span class="hp-val" style="color: #4ade80;">DINOv3 ViT</span></div>
         </div>
 
         <button class="btn-run" id="btnRun" onclick="runInference()">
