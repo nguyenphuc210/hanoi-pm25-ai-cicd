@@ -6,7 +6,7 @@
 - **Lớp:** 65TTNT
 - **Học phần:** Chuyên đề Trí tuệ Nhân tạo
 - **Mô hình AI:** SOFTS (*Series-Core Fusion*) tích hợp backbone **DINOv3 ViT-S/16**
-- **Docker Hub Repository:** [`https://hub.docker.com/r/nguyenphuc210/hanoi-pm25-softs-dinov3`](https://hub.docker.com/r/nguyenphuc210/hanoi-pm25-softs-dinov3)
+- **Docker Hub Repository:** [`https://hub.docker.com/r/phucnguyen210/hanoi-pm25-softs-dinov3`](https://hub.docker.com/r/phucnguyen210/hanoi-pm25-softs-dinov3)
 
 ---
 
@@ -89,12 +89,12 @@ Sau khi CI/CD tự động build và push lên Docker Hub, bất kỳ người d
 
 ### Kéo Docker Image từ Docker Hub
 ```bash
-docker pull nguyenphuc210/hanoi-pm25-softs-dinov3:latest
+docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest
 ```
 
 ### Khởi chạy Container
 ```bash
-docker run -d --name hanoi_pm25_app -p 7860:7860 nguyenphuc210/hanoi-pm25-softs-dinov3:latest
+docker run -d --name hanoi_pm25_app -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest
 ```
 
 ### Truy cập ứng dụng

@@ -12,3 +12,5 @@ venv/
 .DS_Store
 *.docx
 *.pdf
+*token*.txt
+tokendocker.txt

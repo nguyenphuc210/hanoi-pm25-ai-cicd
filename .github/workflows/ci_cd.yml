@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME || 'nguyenphuc210' }}/hanoi-pm25-softs-dinov3
+  DOCKER_IMAGE_NAME: phucnguyen210/hanoi-pm25-softs-dinov3
 
 jobs:
   # -------------------------------------------------------------
@@ -55,17 +55,18 @@ jobs:
 
       - name: 🔍 Check Docker Credentials Configuration
         run: |
-          if [ -z "${{ secrets.DOCKERHUB_TOKEN || vars.DOCKERHUB_TOKEN }}" ]; then
-            echo "::error::DOCKERHUB_TOKEN is empty! Vui lòng kiểm tra lại DOCKERHUB_TOKEN trong Repository Secrets."
+          echo "Target Docker Hub User: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME || 'phucnguyen210' }}"
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_TOKEN || secrets.DOCKER_PASSWORD || secrets.DOCKERHUB_PASSWORD }}" ]; then
+            echo "::error::Docker token/password is empty! Vui long kiem tra secret DOCKERHUB_TOKEN."
             exit 1
           fi
-          echo "✅ DOCKERHUB_TOKEN is present."
+          echo "✅ Docker token is present."
 
       - name: 🔑 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || vars.DOCKERHUB_USERNAME || 'nguyenphuc210' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || vars.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME || 'phucnguyen210' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_TOKEN || secrets.DOCKER_PASSWORD || secrets.DOCKERHUB_PASSWORD }}
 
       - name: 🏷️ Extract metadata (tags, labels)
         id: meta
