@@ -268,13 +268,13 @@ async def api_predict(
     t1_pred = forecast_list[0]
     
     if peak_pm25 <= 50.0:
-        status_text = "● Không khí An toàn (Đạt chuẩn QCVN 05:2023)"
+        status_text = "● Safe Air Quality (QCVN 05:2023 Standard)"
         status_color = "#10b981"
     elif peak_pm25 <= 80.0:
-        status_text = "● Chất lượng Trung bình / Kém (Cần lưu ý)"
+        status_text = "● Moderate / Unhealthy Air (Caution Advised)"
         status_color = "#f59e0b"
     else:
-        status_text = "⚠ Cảnh báo: Vượt mức an toàn quy chuẩn!"
+        status_text = "⚠ Warning: Exceeds Safe Air Quality Standard!"
         status_color = "#ef4444"
 
     # 16 điểm lịch sử gần nhất để hiển thị trực quan
@@ -320,7 +320,7 @@ async def api_predict(
     total_w = sum(raw_weights)
     xai_weights = [round(w / total_w * 100.0, 1) for w in raw_weights]
     xai_weights[0] = round(100.0 - sum(xai_weights[1:]), 1)
-    xai_features = ["PM2.5 Quá khứ", "Tốc độ Gió", "Nhiệt độ", "Lượng Mưa", "Độ ẩm"]
+    xai_features = ["Historical PM2.5", "Wind Speed", "Temperature", "Precipitation", "Humidity"]
 
     inference_time = f"{round(time.time() - start_t, 2)}s"
 
