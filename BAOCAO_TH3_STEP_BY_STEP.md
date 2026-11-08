@@ -62,10 +62,89 @@ Hệ thống MLOps CI/CD được xây dựng hoàn toàn tự động dựa tr�
             [Edge Servers / Users: docker run]
 ```
 
-### 1.2. Chi tiết cấu hình Workflow (`.github/workflows/ci_cd.yml`)
+---
 
-Workflow được kích hoạt tự động mỗi khi có sự kiện `push` hoặc `pull_request` vào nhánh `main`, đồng thời hỗ trợ `workflow_dispatch` để kích hoạt thủ công:
+## PHẦN 2. CÁC BƯỚC THỰC HIỆN STEP-BY-STEP TRIỂN KHAI CI/CD & BUILD DOCKER IMAGE
 
+Dưới đây là đặc tả chi tiết toàn bộ tiến trình kỹ thuật gồm 8 bước tuần tự mà sinh viên đã thực hiện từ khâu chuẩn bị mã nguồn đến khi xuất bản thành công hệ thống lên Docker Hub:
+
+### Bước 1: Chuẩn bị mã nguồn và checkpoint mô hình AI
+- Kế thừa và chuẩn hóa cấu trúc thư mục từ mô hình AI đã hoàn thiện:
+  - `models/SOFTS.py`: Định nghĩa kiến trúc mô hình tổng thể.
+  - `layers/DINOv3Encoder.py`: Backbone thị giác ViT-S/16 (12 block Attention, 2D Axial RoPE, 4 Register Tokens).
+  - `app.py`: Backend serving viết bằng FastAPI, phục vụ suy luận thời gian thực cho 10 trạm quan trắc tại Hà Nội và kiểm tra sức khỏe `/health`.
+  - `index.html`: Giao diện Dashboard trực quan hóa chuỗi thời gian 24 giờ và giải thích mô hình XAI (Explainable AI).
+  - `softs_dinov3_hanoi.pt`: Tệp trọng số mô hình đã huấn luyện (dung lượng 3.84 MB, nạp được trực tiếp vào Git).
+
+### Bước 2: Thiết kế và kiểm định bộ kiểm thử tự động (Unit & Integration Tests)
+- Để đảm bảo mã nguồn và trọng số không bị lỗi trước khi đóng gói, sinh viên đã xây dựng bộ kiểm thử bằng thư viện `pytest`:
+  - `tests/test_model.py`:
+    1. `test_model_file_exists`: Xác thực tệp `softs_dinov3_hanoi.pt` tồn tại và dung lượng > 1 MB.
+    2. `test_model_initialization`: Kiểm tra khởi tạo lớp `Model` với `ModelConfigs`.
+    3. `test_checkpoint_loading`: Kiểm tra tính tương thích của `state_dict`, bảo đảm không thiếu trọng số.
+    4. `test_model_forward_shape_and_values`: Truyền tensor giả lập `(1, 96, 7)` và xác nhận đầu ra chuẩn `(1, 24, 7)` không chứa giá trị `NaN` hay `Inf`.
+  - `tests/test_api.py`:
+    5. `test_health_check_endpoint`: Kiểm tra `GET /health` trả về HTTP 200 và trạng thái `healthy`.
+    6. `test_dashboard_homepage`: Kiểm tra `GET /` tải thành công giao diện web.
+    7. `test_predict_endpoint_with_csv_upload`: Kiểm tra `POST /api/predict` suy luận ngoại tuyến từ tệp CSV giả lập, trả về đủ 24 điểm mốc thời gian kèm MAE, RMSE.
+- Thực thi kiểm thử cục bộ:
+  ```bash
+  python -m pytest tests/ -v
+  # Kết quả: 7 passed in 9.75s (100% Passed)
+  ```
+
+### Bước 3: Đóng gói Docker Container và Tối ưu hóa kích thước Image
+- Viết tệp `Dockerfile` tối ưu hóa:
+  - Sử dụng base image `python:3.10-slim` thay cho bản full nhằm cắt giảm hơn 800 MB dung lượng hệ điều hành.
+  - Trong `requirements.txt`, sử dụng cờ `--extra-index-url https://download.pytorch.org/whl/cpu` để chỉ tải bản PyTorch CPU (~180 MB), tránh tải gói CUDA GPU (> 2.5 GB) vốn không cần thiết cho máy chủ suy luận chuỗi thời gian nhẹ.
+  - Tách riêng bước cài đặt dependencies trước khi sao chép toàn bộ mã nguồn nhằm tận dụng triệt để cơ chế **Docker Layer Caching**.
+  - Thiết lập lệnh kiểm tra định kỳ `HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:7860/health || exit 1`.
+- Viết tệp `.dockerignore`:
+  - Loại bỏ các tệp rác và tệp bảo mật: `.git`, `__pycache__`, `.pytest_cache`, `tests/`, `*.docx`, `*.pdf`, `*token*.txt`.
+
+### Bước 4: Tạo tài khoản và Cấu hình Secrets trên Docker Hub & GitHub
+- Đăng nhập Docker Hub với tài khoản `phucnguyen210`.
+- Tạo Personal Access Token (PAT) tại `Account Settings -> Personal Access Tokens` với tên `github-actions-cicd`, cấp quyền **Read & Write**.
+- Trong repository GitHub [nguyenphuc210/hanoi-pm25-ai-cicd](https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd), vào mục `Settings -> Secrets and variables -> Actions` và cấu hình 2 biến bí mật:
+  1. `DOCKERHUB_USERNAME`: `phucnguyen210`
+  2. `DOCKERHUB_TOKEN`: `dckr_pat_***********************************` (Personal Access Token đã cấp)
+
+### Bước 5: Viết kịch bản tự động hóa GitHub Actions (`.github/workflows/ci_cd.yml`)
+- Thiết lập tệp cấu hình pipeline hoàn chỉnh gồm 2 giai đoạn:
+  - **CI (Model & API Validation):** Tự động kích hoạt khi có commit đẩy lên nhánh `main`. Kéo mã nguồn, cài đặt Python 3.10, cài dependencies và thực thi lệnh `pytest tests/ -v`.
+  - **CD (Build & Push Docker Image):** Phụ thuộc vào CI (`needs: ci_test_and_validation`). Khi CI đạt 100%, tự động khởi tạo `docker/setup-buildx-action@v3`, đăng nhập Docker Hub qua secrets, build image và đẩy lên Docker Hub với các nhãn `latest`, `main`, và mã `sha` của commit.
+
+### Bước 6: Khởi tạo Git và Đẩy mã nguồn lên GitHub
+- Mở terminal tại thư mục dự án và thực thi chuỗi lệnh:
+  ```bash
+  git init -b main
+  git add .
+  git commit -m "feat(mlops): implement CI/CD pipeline and Docker deployment"
+  git remote add origin https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git
+  git push -u origin main
+  ```
+
+### Bước 7: Giám sát và Tinh chỉnh Pipeline trên GitHub Actions
+- Khi mã nguồn được đẩy lên, GitHub Actions lập tức khởi tạo tiến trình chạy tự động.
+- Trong quá trình triển khai, sinh viên đã phát hiện và xử lý kịp thời lỗi sai lệch giữa tên đăng nhập GitHub (`nguyenphuc210`) và Docker ID (`phucnguyen210`) bằng cách chuẩn hóa cấu hình fallback trong `ci_cd.yml`.
+- Tại lần chạy **Run #6** (Run ID: `41311841207`), toàn bộ quy trình đã đạt **100% SUCCESS**:
+  - Giai đoạn CI: Hoàn thành trong **45 giây** (Passed 7/7 bài test).
+  - Giai đoạn CD: Hoàn thành trong **1 phút 12 giây** (Build & Push thành công cả 3 thẻ tag).
+
+### Bước 8: Kiểm thử và Nghiệm thu Docker Image từ xa
+- Kiểm tra kho lưu trữ công khai trên Docker Hub: [https://hub.docker.com/r/phucnguyen210/hanoi-pm25-softs-dinov3](https://hub.docker.com/r/phucnguyen210/hanoi-pm25-softs-dinov3), xác nhận image có dung lượng nén tối ưu **448.14 MB**.
+- Thực hiện nghiệm thu bằng cách kéo image từ xa và khởi chạy container cục bộ:
+  ```bash
+  docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest
+  docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest
+  ```
+- Mở trình duyệt tại `http://localhost:7860`, xác nhận giao diện Web Dashboard hiển thị mượt mà, đường đồ thị dự báo 24 giờ liên tục theo giờ chẵn và kiểm tra endpoint `/health` phản hồi trạng thái `healthy`.
+
+---
+
+## PHẦN 3. CHI TIẾT MÃ NGUỒN CẤU HÌNH HỆ THỐNG
+
+### 3.1. Mã nguồn GitHub Actions Workflow (`.github/workflows/ci_cd.yml`)
 ```yaml
 name: AI MLOps CI/CD Pipeline
 
@@ -150,33 +229,7 @@ jobs:
           cache-to: type=gha,mode=max
 ```
 
----
-
-## PHẦN 2. THIẾT KẾ BỘ KIỂM THỬ TỰ ĐỘNG (UNIT & INTEGRATION TESTS)
-
-Bộ kiểm thử được viết bằng thư viện `pytest`, chia thành 2 module chuyên biệt:
-
-### 2.1. Kiểm thử mô hình AI (`tests/test_model.py`)
-1. **`test_model_file_exists`**: Kiểm tra sự tồn tại của file checkpoint `softs_dinov3_hanoi.pt` và dung lượng phải lớn hơn 1.0 MB (tránh trường hợp file bị hỏng hoặc dung lượng 0 byte).
-2. **`test_model_initialization`**: Kiểm tra khởi tạo lớp `Model` với cấu hình `ModelConfigs`, đảm bảo mô hình có đầy đủ thuộc tính `encoder` của DINOv3.
-3. **`test_checkpoint_loading`**: Kiểm tra tính tương thích khi nạp `state_dict` vào mô hình, đảm bảo không có missing keys trọng số.
-4. **`test_model_forward_shape_and_values`**: Kiểm thử suy luận tensor thực tế:
-   - Đầu vào giả lập chuỗi 96 giờ x 7 đặc trưng: `torch.randn(1, 96, 7)`.
-   - Đầu ra dự báo 24 giờ tiếp theo: xác nhận kích thước chuẩn `(1, 24, 7)`.
-   - Xác thực giá trị không được chứa `NaN` hoặc `Inf`.
-
-### 2.2. Kiểm thử API phục vụ (`tests/test_api.py`)
-1. **`test_health_check_endpoint`**: Kiểm tra endpoint `GET /health` trả về mã HTTP 200 và chuỗi thông tin `healthy`.
-2. **`test_dashboard_homepage`**: Kiểm tra endpoint `GET /` trả về giao diện Dashboard giám sát thời gian thực.
-3. **`test_predict_endpoint_with_csv_upload`**: Kiểm tra endpoint `POST /api/predict` suy luận offline từ file CSV 96 giờ, kiểm tra phản hồi JSON chứa đủ mốc 24 giờ trong `forecast_data` và các thông số đánh giá động `mae`, `rmse`.
-
----
-
-## PHẦN 3. ĐÓNG GÓI DOCKER CONTAINER CHO MÔ HÌNH AI
-
-### 3.1. File cấu hình `Dockerfile`
-Sử dụng base image `python:3.10-slim` để tối ưu hóa kích thước image nhưng vẫn đảm bảo tính ổn định và tương thích cao:
-
+### 3.2. Mã nguồn `Dockerfile`
 ```dockerfile
 FROM python:3.10-slim
 
@@ -205,59 +258,25 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
 ```
 
-### 3.2. File `.dockerignore`
-Loại bỏ các tệp rác, cache kiểm thử và tệp cấu hình không cần thiết khi chạy serving nhằm giảm tối đa dung lượng container:
-- `.git`, `.gitignore`, `.github`
-- `__pycache__`, `*.pyc`, `.pytest_cache`
-- `tests/`, `yeucauTH3.txt`, `*.md`, `*.docx`, `*.pdf`, `*token*.txt`
-
 ---
 
-## PHẦN 4. KẾT QUẢ THỰC NGHIỆM & HƯỚNG DẪN TÁI HIỆN (STEP-BY-STEP)
+## PHẦN 4. HƯỚNG DẪN NGƯỜI DÙNG VẬN HÀNH DỊCH VỤ
 
-### 4.1. Kết quả GitHub Actions Pipeline Run #6
-- **Giai đoạn CI (`CI - Model & API Validation`)**:
-  - Thời gian thực thi: **45 giây**.
-  - Kết quả: **`7 passed, 1 warning in 9.75s`** (100% Passed).
-- **Giai đoạn CD (`CD - Build & Push Docker Image`)**:
-  - Thời gian thực thi: **1 phút 12 giây**.
-  - Trạng thái đăng nhập Docker Hub: `Log in to Docker Hub => completed success`.
-  - Kết quả xuất bản: Image được build và push thành công lên Docker Hub với 3 tags:
-    - `phucnguyen210/hanoi-pm25-softs-dinov3:latest` (Dung lượng nén: **448.14 MB**)
-    - `phucnguyen210/hanoi-pm25-softs-dinov3:sha-8ee8988`
-    - `phucnguyen210/hanoi-pm25-softs-dinov3:main`
+Bất kỳ ai khi có Docker đều có thể vận hành hệ thống dự báo AI của bạn chỉ với 2 câu lệnh:
 
-### 4.2. Hướng dẫn Kéo và Chạy Container từ Docker Hub
-
-Bất kỳ máy trạm hoặc máy chủ nào có cài đặt Docker đều có thể vận hành hệ thống dự báo AI chỉ với 2 câu lệnh:
-
-#### Bước 1: Kéo Image từ Docker Hub
 ```bash
+# 1. Kéo Image công khai từ Docker Hub về máy
 docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest
-```
 
-#### Bước 2: Khởi chạy Container
-```bash
+# 2. Khởi chạy Container serving (cổng 7860)
 docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest
-```
 
-#### Bước 3: Nghiệm thu dịch vụ
-- Truy cập Dashboard giao diện người dùng: [http://localhost:7860](http://localhost:7860)
-- Kiểm tra Endpoint giám sát trạng thái hệ thống:
-  ```bash
-  curl http://localhost:7860/health
-  ```
-  *Kết quả trả về:*
-  ```json
-  {
-    "status": "healthy",
-    "service": "Hanoi PM2.5 Air Quality Forecasting",
-    "model": "SOFTS with DINOv3 ViT Backbone",
-    "backend": "FastAPI + PyTorch CPU",
-    "stations_count": 10,
-    "platform": "OnRender / Cloud"
-  }
-  ```
+# 3. Kiểm tra trạng thái sức khỏe
+curl http://localhost:7860/health
+
+# 4. Mở Dashboard giao diện người dùng trên trình duyệt:
+# http://localhost:7860
+```
 
 ---
 

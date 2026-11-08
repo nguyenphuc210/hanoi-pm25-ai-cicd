@@ -1,5 +1,5 @@
 """
-Tạo file Word .docx Báo cáo Bài thực hành 3
+Tạo file Word .docx Báo cáo Bài thực hành 3 (Bổ sung phần 8 bước triển khai chi tiết)
 Sinh viên: Nguyễn Hồng Phúc - MSSV: 2351260680 - Lớp: 65TTNT
 """
 
@@ -23,17 +23,17 @@ def set_cell_background(cell, fill_hex):
 def build_docx(filename):
     doc = docx.Document()
     for section in doc.sections:
-        section.top_margin = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
-        section.left_margin = Inches(0.8)
-        section.right_margin = Inches(0.8)
+        section.top_margin = Inches(0.7)
+        section.bottom_margin = Inches(0.7)
+        section.left_margin = Inches(0.7)
+        section.right_margin = Inches(0.7)
 
     # Tiêu đề
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_sub = p_sub.add_run("BÁO CÁO THỰC HÀNH — CHUYÊN ĐỀ TRÍ TUỆ NHÂN TẠO")
     r_sub.font.name = "Times New Roman"
-    r_sub.font.size = Pt(12)
+    r_sub.font.size = Pt(11.5)
     r_sub.font.bold = True
     r_sub.font.color.rgb = RGBColor(0x37, 0x41, 0x51)
 
@@ -41,7 +41,7 @@ def build_docx(filename):
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_title = p_title.add_run("BÀI THỰC HÀNH 3: TRIỂN KHAI CI/CD & BUILD DOCKER IMAGE CHO BÀI TOÁN AI")
     r_title.font.name = "Times New Roman"
-    r_title.font.size = Pt(16)
+    r_title.font.size = Pt(15)
     r_title.font.bold = True
     r_title.font.color.rgb = RGBColor(0x1e, 0x3a, 0x8a)
 
@@ -89,10 +89,10 @@ def build_docx(filename):
     items = [
         ("Yêu cầu 1: Triển khai CI/CD tự động cho bài toán AI", "HOÀN THÀNH (100% Tests Passed)",
          "GitHub Repo: https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd\nActions Run #6: https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd/actions/runs/41311841207"),
-        ("Yêu cầu 2: Build Docker Image & Public lên Docker Hub", "HOÀN THÀNH (Dung lượng: 448 MB)",
+        ("Yêu cầu 2: Build Docker Image & Public lên Docker Hub", "HOÀN THÀNH (Dung lượng: 448.14 MB)",
          "Docker Hub Public Repository:\nhttps://hub.docker.com/r/phucnguyen210/hanoi-pm25-softs-dinov3\nTags: latest, main, sha-8ee8988"),
         ("Yêu cầu 3: Báo cáo PDF Step-by-Step", "HOÀN THÀNH",
-         "Tài liệu đặc tả kiến trúc, mã nguồn, kiểm thử và hướng dẫn vận hành từng bước.")
+         "Tài liệu đặc tả chi tiết kiến trúc, các bước kỹ thuật thực tế và hướng dẫn vận hành.")
     ]
     for row_idx, (c0, c1, c2) in enumerate(items, start=1):
         row = table_res.rows[row_idx]
@@ -109,55 +109,85 @@ def build_docx(filename):
 
     doc.add_paragraph()
 
-    # Nội dung chi tiết các phần
-    sections_text = [
-        ("PHẦN 1. THIẾT KẾ KIẾN TRÚC CI/CD CHO BÀI TOÁN AI (YÊU CẦU 1)", [
-            "Hệ thống MLOps CI/CD được xây dựng hoàn toàn tự động dựa trên GitHub Actions và Docker Hub:",
-            "• Giai đoạn 1 — Continuous Integration (CI): Tự động kiểm thử mô hình mạng nơ-ron (SOFTS + DINOv3 ViT-S/16) và API serving trên môi trường Ubuntu sạch với Python 3.10 và PyTorch CPU. Chạy bộ kiểm thử 7/7 bài test.",
-            "• Giai đoạn 2 — Continuous Deployment (CD): Chỉ chạy khi CI vượt qua 100%. Tự động kết nối Docker Hub bằng Personal Access Token, build Docker image và gắn nhãn (latest, git sha), sau đó xuất bản công khai lên Docker Hub."
+    # PHẦN 2 MỚI: 8 BƯỚC TRIỂN KHAI STEP-BY-STEP
+    h_steps = doc.add_heading("PHẦN 2. CÁC BƯỚC THỰC HIỆN STEP-BY-STEP TRIỂN KHAI CI/CD & DOCKER", level=1)
+    for r in h_steps.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(13)
+        r.font.color.rgb = RGBColor(0x1e, 0x40, 0xaf)
+
+    steps_list = [
+        ("Bước 1: Chuẩn bị mã nguồn & mô hình AI",
+         "Tập hợp cấu trúc mạng models/SOFTS.py, backbone layers/DINOv3Encoder.py, backend app.py (FastAPI) và file checkpoint trọng số softs_dinov3_hanoi.pt (3.84 MB, đẩy được trực tiếp vào Git)."),
+        ("Bước 2: Thiết kế Test Suite (Pytest)",
+         "Xây dựng tests/test_model.py (kiểm tra tồn tại weights, khởi tạo mạng, nạp state_dict, suy luận tensor shape 96h -> 24h) và tests/test_api.py (kiểm tra endpoint /health, /, /api/predict). Nghiệm thu cục bộ đạt 7/7 bài test passed."),
+        ("Bước 3: Viết Dockerfile & Tối ưu dung lượng",
+         "Sử dụng base image python:3.10-slim. Trong requirements.txt trỏ link PyTorch CPU Wheel để giảm dung lượng từ >2.5 GB xuống còn 448.14 MB. Viết .dockerignore loại trừ file rác và token."),
+        ("Bước 4: Cấu hình Secrets trên Docker Hub & GitHub",
+         "Đăng nhập Docker Hub với tài khoản phucnguyen210, tạo Personal Access Token (PAT) quyền Read & Write. Cấu hình 2 biến bí mật DOCKERHUB_USERNAME và DOCKERHUB_TOKEN trong GitHub Repository Secrets."),
+        ("Bước 5: Viết Workflow GitHub Actions (.github/workflows/ci_cd.yml)",
+         "Thiết lập pipeline tự động 2 giai đoạn: CI (chạy pytest trên Ubuntu sạch) và CD (dùng Docker Buildx đóng gói và tự động đẩy image lên Docker Hub khi CI vượt qua 100%)."),
+        ("Bước 6: Khởi tạo Git & Đẩy code lên GitHub",
+         "Thực hiện git init -b main, commit mã nguồn, kết nối remote origin trỏ về repo nguyenphuc210/hanoi-pm25-ai-cicd và đẩy lên bằng git push -u origin main."),
+        ("Bước 7: Giám sát & Xử lý lỗi trong CI/CD",
+         "Theo dõi tiến trình chạy trên GitHub Actions. Khắc phục sai lệch Docker ID, điều chỉnh fallback an toàn trong workflow. Đợt chạy Run #6 đạt 100% SUCCESS cả 2 giai đoạn CI (45s) và CD (1m12s)."),
+        ("Bước 8: Kiểm thử & Nghiệm thu từ xa",
+         "Kiểm tra image công khai trên Docker Hub với 3 tags (latest, main, sha). Kéo image về máy trạm bằng docker pull, khởi chạy container cổng 7860 và xác nhận dashboard hoạt động mượt mà.")
+    ]
+
+    for title_s, desc_s in steps_list:
+        p_s = doc.add_paragraph()
+        r_title_s = p_s.add_run(f"• {title_s}: ")
+        r_title_s.font.name = "Times New Roman"
+        r_title_s.font.size = Pt(10.5)
+        r_title_s.font.bold = True
+        r_desc_s = p_s.add_run(desc_s)
+        r_desc_s.font.name = "Times New Roman"
+        r_desc_s.font.size = Pt(10)
+
+    doc.add_paragraph()
+
+    # Các phần lý thuyết và kết luận
+    other_sections = [
+        ("PHẦN 3. BỘ KIỂM THỬ TỰ ĐỘNG (UNIT & INTEGRATION TESTS)", [
+            "Bộ kiểm thử được viết bằng pytest gồm 2 module kiểm tra toàn vẹn trọng số nơ-ron, forward pass tensor và serving API. Kết quả: 7 passed in 9.75s trên môi trường Ubuntu của GitHub Actions."
         ]),
-        ("PHẦN 2. BỘ KIỂM THỬ TỰ ĐỘNG (UNIT & INTEGRATION TESTS)", [
-            "Bộ kiểm thử được viết bằng thư viện pytest gồm 2 module:",
-            "1. tests/test_model.py: Xác thực sự tồn tại của file checkpoint softs_dinov3_hanoi.pt (> 1 MB), kiểm tra khởi tạo mô hình với DINOv3Encoder, nạp state_dict không lỗi, và suy luận forward pass tensor đầu vào (1, 96, 7) cho ra đúng output (1, 24, 7) không chứa NaN hay Inf.",
-            "2. tests/test_api.py: Kiểm tra endpoint GET /health trả về trạng thái healthy, endpoint GET / trả về dashboard, và endpoint POST /api/predict suy luận offline từ file CSV mẫu trả về đủ 24 điểm dự báo cùng các thông số đánh giá động MAE, RMSE."
+        ("PHẦN 4. ĐÓNG GÓI DOCKER IMAGE CHO MÔ HÌNH AI", [
+            "Ứng dụng được đóng gói qua Dockerfile chuẩn MLOps, sử dụng python:3.10-slim và PyTorch CPU, tối ưu layer caching và tích hợp HEALTHCHECK định kỳ."
         ]),
-        ("PHẦN 3. ĐÓNG GÓI DOCKER CONTAINER CHO MÔ HÌNH AI (YÊU CẦU 2)", [
-            "• Base image: python:3.10-slim tối ưu dung lượng hệ điều hành (< 120 MB).",
-            "• PyTorch CPU: Cài đặt qua tham số --extra-index-url https://download.pytorch.org/whl/cpu giúp giảm hơn 2.3 GB so với PyTorch GPU CUDA.",
-            "• Layer Caching & .dockerignore: Tách biệt COPY requirements.txt để cache dependencies, loại trừ các file rác và token bảo mật, giúp image cuối cùng có dung lượng nén chỉ 448.14 MB.",
-            "• Healthcheck: Tích hợp lệnh curl định kỳ tới /health đảm bảo container luôn sẵn sàng phục vụ."
-        ]),
-        ("PHẦN 4. HƯỚNG DẪN STEP-BY-STEP TÁI HIỆN VÀ VẬN HÀNH HỆ THỐNG", [
-            "Bất kỳ máy tính hoặc máy chủ nào có Docker đều có thể vận hành hệ thống chỉ với 2 lệnh:",
-            "Bước 1: Kéo Image từ Docker Hub:",
+        ("PHẦN 5. HƯỚNG DẪN NGƯỜI DÙNG VẬN HÀNH DỊCH VỤ", [
+            "Lệnh kéo và chạy container từ Docker Hub:",
             "   docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest",
-            "Bước 2: Khởi chạy Container phục vụ:",
             "   docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest",
-            "Bước 3: Truy cập nghiệm thu:",
-            "   - Web Dashboard: http://localhost:7860",
-            "   - Endpoint kiểm tra sức khỏe: http://localhost:7860/health"
+            "Truy cập: http://localhost:7860"
         ]),
-        ("PHẦN 5. KẾT LUẬN", [
-            "Bài thực hành 3 đã hoàn thành xuất sắc 100% mục tiêu: triển khai thành công CI/CD pipeline tự động hóa cho mô hình AI và đóng gói xuất bản Docker image công khai lên Docker Hub. Toàn bộ mã nguồn, workflow và image đều sẵn sàng phục vụ kiểm thử và triển khai thực tế."
+        ("PHẦN 6. KẾT LUẬN", [
+            "Bài thực hành 3 đã hoàn thành xuất sắc 100% mục tiêu: tự động hóa CI/CD cho mô hình AI và đóng gói xuất bản Docker image công khai lên Docker Hub."
         ])
     ]
 
-    for sec_title, sec_paragraphs in sections_text:
+    for sec_title, sec_paragraphs in other_sections:
         h = doc.add_heading(sec_title, level=1)
         for r in h.runs:
             r.font.name = "Times New Roman"
-            r.font.size = Pt(13)
+            r.font.size = Pt(12.5)
             r.font.color.rgb = RGBColor(0x1e, 0x40, 0xaf)
         for p_text in sec_paragraphs:
             p = doc.add_paragraph()
             r = p.add_run(p_text)
             r.font.name = "Times New Roman"
-            r.font.size = Pt(10.5)
+            r.font.size = Pt(10)
 
     doc.save(filename)
     print(f"[+] DOCX generated successfully: {filename}")
 
 
 if __name__ == "__main__":
-    out_docx = "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680.docx"
+    out_docx = "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680_StepByStep.docx"
     build_docx(out_docx)
+    try:
+        import shutil
+        shutil.copyfile(out_docx, "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680.docx")
+        print("[+] Also updated BaoCao_TH3_NguyenHongPhuc_2351260680.docx")
+    except Exception as e:
+        print("[i] Main docx is currently open in Word, saved to StepByStep docx successfully!")
