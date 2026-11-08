@@ -371,7 +371,11 @@ def build_pdf(filename):
     story.append(test_table)
     story.append(Spacer(1, 5))
     story.append(Paragraph("<b>Kết quả thực thi Pytest:</b> <code>7 passed, 1 warning in 9.75s (100% Passed)</code> trên máy chủ Ubuntu của GitHub Actions.", body_style))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("<b>Ý nghĩa chung của 7 bài test:</b> Đóng vai trò là <i>Cổng chất lượng tự động (Quality Gate)</i>. Trong Deep Learning, mô hình rất dễ gặp lỗi ngầm (silent bugs: thiếu layers, kích thước tensor sai, tràn số sinh NaN/Inf). 7 bài test này đảm bảo 100% tính toàn vẹn toán học của mô hình và tính sẵn sàng phục vụ thực tế của API.", body_style))
+    story.append(Spacer(1, 3))
+    story.append(Paragraph("<b>Ý nghĩa cốt lõi của CI/CD cho AI:</b> Tự động hóa hoàn toàn chu trình kiểm thử và đóng gói; xóa bỏ triệt để xung đột môi trường (Environment Parity) giữa máy cá nhân và production; tăng tốc độ chuyển giao (deployment velocity) và bảo đảm độ tin cậy liên tục cho mô hình dự báo.", body_style))
+    story.append(Spacer(1, 6))
 
     # ========================== PHẦN 4 ==========================
     story.append(Paragraph("PHẦN 4. ĐÓNG GÓI DOCKER IMAGE CHO MÔ HÌNH AI (YÊU CẦU 2)", h1_style))

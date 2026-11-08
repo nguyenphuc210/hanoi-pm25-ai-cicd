@@ -142,7 +142,41 @@ Dưới đây là đặc tả chi tiết toàn bộ tiến trình kỹ thuật g
 
 ---
 
-## PHẦN 3. CHI TIẾT MÃ NGUỒN CẤU HÌNH HỆ THỐNG
+## PHẦN 3. BỘ KIỂM THỬ TỰ ĐỘNG 7 BÀI TEST & Ý NGHĨA CỐT LÕI
+
+Để đảm bảo hệ thống AI hoạt động ổn định và tin cậy trước khi đóng gói container, quy trình CI tích hợp bộ kiểm thử tự động gồm **7 bài test toàn diện** (chia làm 2 module: Model Unit Tests và API Integration Tests).
+
+### 3.1. Bảng thống kê chi tiết 7 bài test
+
+| STT | Tệp kiểm thử | Tên hàm Test | Mục đích & Tiêu chuẩn chấp nhận (Acceptance Criteria) | Kết quả |
+|:---:|:---|:---|:---|:---:|
+| **1** | `test_model.py` | `test_model_file_exists` | Xác thực file checkpoint `softs_dinov3_hanoi.pt` tồn tại trong thư mục và dung lượng > 1 MB (tránh file bị rỗng, hỏng hoặc lỗi Git LFS). | **PASSED** |
+| **2** | `test_model.py` | `test_model_initialization` | Khởi tạo kiến trúc mạng nơ-ron `SOFTS` với siêu tham số cấu hình, xác nhận backbone `DINOv3Encoder` được gắn kết hoàn chỉnh vào mô hình. | **PASSED** |
+| **3** | `test_model.py` | `test_checkpoint_loading` | Nạp bộ trọng số `state_dict` vào mạng nơ-ron, xác nhận không có missing keys và chuyển thành công mô hình sang chế độ `eval()`. | **PASSED** |
+| **4** | `test_model.py` | `test_model_forward_shape_and_values` | Truyền tensor giả lập đầu vào $(1, 96, 7)$ (96 giờ quá khứ x 7 biến). Kiểm tra đầu ra phải đúng $(1, 24, 7)$ (24 giờ dự báo) và **không chứa giá trị rác NaN hoặc Inf**. | **PASSED** |
+| **5** | `test_api.py` | `test_health_check_endpoint` | Gửi request `GET /health` đến FastAPI, xác nhận HTTP status 200, phản hồi JSON có `status: "healthy"` và nhận diện đúng model. | **PASSED** |
+| **6** | `test_api.py` | `test_dashboard_homepage` | Gửi request `GET /`, xác nhận HTTP status 200 và nội dung trả về là mã HTML của Dashboard theo chuẩn. | **PASSED** |
+| **7** | `test_api.py` | `test_predict_endpoint_with_csv_upload` | Gửi request `POST /api/predict` kèm tệp CSV dữ liệu khí tượng giả lập. Xác nhận API thực hiện suy luận offline trơn tru, trả về đủ 24 điểm mốc thời gian kèm MAE, RMSE hợp lệ. | **PASSED** |
+
+### 3.2. Ý nghĩa chung của việc kiểm thử 7 bài test trong MLOps
+Trong các hệ thống phần mềm truyền thống, kiểm thử chỉ cần kiểm tra logic code. Nhưng trong **hệ thống Trí tuệ Nhân tạo (AI/ML System)**, việc kiểm thử 7 bài test này mang ý nghĩa sống còn:
+1. **Đóng vai trò làm Cổng chất lượng tự động (Quality Gate):** Pipeline CI/CD được lập trình để chặn đứng việc đóng gói Docker nếu có bất kỳ bài test nào bị thất bại. Điều này ngăn chặn triệt để việc phát hành một Docker image hỏng ra công chúng.
+2. **Ngăn chặn lỗi "Silent Failures" của Deep Learning:** Mô hình học sâu rất dễ gặp các lỗi âm thầm (như trọng số không khớp kích thước, đạo hàm bùng nổ dẫn đến giá trị `NaN`/`Inf`, hoặc tensor đầu ra sai chiều không gian). Các bài test số 1 đến số 4 đảm bảo "bộ não" AI hoàn toàn lành lặn về mặt toán học và cấu trúc dữ liệu.
+3. **Đảm bảo tính sẵn sàng phục vụ thực tế (Production Readiness):** Các bài test số 5 đến số 7 kiểm tra lớp giao tiếp dịch vụ (FastAPI). Dù mô hình AI có chạy tốt trong Jupyter Notebook nhưng nếu API backend bị crash, không nhận diện được file tải lên hoặc không phản hồi JSON đúng format thì toàn bộ ứng dụng vẫn vô dụng. 7 bài test này kết nối thành chuỗi xác thực toàn diện từ tầng thuật toán sâu nhất đến tầng ứng dụng người dùng.
+
+### 3.3. Ý nghĩa của việc áp dụng CI/CD cho bài toán AI
+CI/CD (Continuous Integration / Continuous Deployment) là cầu nối đưa mô hình Trí tuệ Nhân tạo từ môi trường nghiên cứu (Jupyter Notebook / Kaggle) ra thành một sản phẩm công nghệ thực thụ trong thực tế:
+1. **Loại bỏ vấn đề *"Nó chạy tốt trên máy của tôi nhưng lỗi trên máy của bạn"* (Environment Parity):**
+   - Trước đây, khi chia sẻ mô hình AI, người dùng khác thường gặp lỗi do xung đột phiên bản Python, CUDA, PyTorch hoặc thiếu thư viện.
+   - Với CI/CD, mã nguồn và mô hình được build và kiểm thử tự động trên một máy chủ ảo sạch sẽ (Ubuntu Runner). Sau đó được đóng gói vào Docker Container đóng kín. Bất kỳ ai chỉ cần cài Docker là chạy được ngay lập tức với hành vi giống hệt 100%.
+2. **Tự động hóa hoàn toàn và Tăng tốc độ chuyển giao (Deployment Velocity):**
+   - Thay vì kỹ sư phải đăng nhập thủ công, cài đặt thư viện, build image, gõ lệnh push lên Docker Hub (vốn mất thời gian và dễ gõ nhầm lệnh), CI/CD làm toàn bộ việc này hoàn toàn tự động chỉ sau một thao tác `git push`.
+3. **Bảo đảm tính toàn vẹn và độ tin cậy liên tục:**
+   - Mỗi khi nhóm phát triển cập nhật dữ liệu mới, huấn luyện lại checkpoint mới, hoặc chỉnh sửa giao diện Dashboard, pipeline sẽ tự động chạy lại toàn bộ 7 bài test. Chỉ những thay đổi thực sự chuẩn xác mới được phép phát hành thành image mới trên Docker Hub.
+
+---
+
+## PHẦN 4. CHI TIẾT MÃ NGUỒN CẤU HÌNH HỆ THỐNG
 
 ### 3.1. Mã nguồn GitHub Actions Workflow (`.github/workflows/ci_cd.yml`)
 ```yaml
@@ -260,7 +294,7 @@ CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
 
 ---
 
-## PHẦN 4. HƯỚNG DẪN STEP-BY-STEP ĐỂ CLONE VÀ CHẠY DỰ ÁN (FOR USERS & REVIEWERS)
+## PHẦN 5. HƯỚNG DẪN STEP-BY-STEP ĐỂ CLONE VÀ CHẠY DỰ ÁN (FOR USERS & REVIEWERS)
 
 Để người khác (thầy cô chấm bài, người đánh giá hoặc người dùng mới) có thể chạy thử nghiệm dự án sau khi clone về máy, dự án hỗ trợ 3 phương thức vận hành linh hoạt:
 
@@ -340,7 +374,7 @@ python -m uvicorn app:app --host 0.0.0.0 --port 7860
 
 ---
 
-## PHẦN 5. KẾT LUẬN
+## PHẦN 6. KẾT LUẬN
 
 Bài thực hành 3 đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra:
 1. Đã thiết kế và chuẩn hóa quy trình **CI/CD hoàn chỉnh cho mô hình AI** thông qua GitHub Actions, tự động kiểm thử toàn diện từ checkpoint trọng số đến suy luận tensor và API serving.

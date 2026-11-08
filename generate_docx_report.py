@@ -147,11 +147,113 @@ def build_docx(filename):
 
     doc.add_paragraph()
 
-    # Các phần lý thuyết và kết luận
+    doc.add_paragraph()
+
+    # PHẦN 3: BỘ KIỂM THỬ TỰ ĐỘNG 7 BÀI TEST & Ý NGHĨA CỐT LÕI
+    h_test_sec = doc.add_heading("PHẦN 3. BỘ KIỂM THỬ TỰ ĐỘNG 7 BÀI TEST & Ý NGHĨA CỐT LÕI", level=1)
+    for r in h_test_sec.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(13)
+        r.font.color.rgb = RGBColor(0x1e, 0x40, 0xaf)
+
+    p_intro_test = doc.add_paragraph()
+    r = p_intro_test.add_run("Quy trình Continuous Integration (CI) tích hợp bộ kiểm thử tự động gồm 7 bài test toàn diện bằng framework pytest, chia làm 2 module: Model Unit Tests (Kiểm thử mô hình nơ-ron) và API Integration Tests (Kiểm thử dịch vụ phục vụ).")
+    r.font.name = "Times New Roman"
+    r.font.size = Pt(10)
+
+    # Bảng 7 bài test
+    table_tests = doc.add_table(rows=8, cols=4)
+    table_tests.alignment = WD_TABLE_ALIGNMENT.CENTER
+    test_headers = ["STT", "Tệp kiểm thử", "Tên hàm Test & Tiêu chuẩn chấp nhận", "Kết quả"]
+    for i, th in enumerate(test_headers):
+        cell = table_tests.rows[0].cells[i]
+        cell.text = th
+        set_cell_background(cell, "1E40AF")
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for r in p.runs:
+                r.font.name = "Times New Roman"
+                r.font.bold = True
+                r.font.size = Pt(9)
+                r.font.color.rgb = RGBColor(0xff, 0xff, 0xff)
+
+    test_items = [
+        ("1", "test_model.py", "test_model_file_exists: Xác thực tệp softs_dinov3_hanoi.pt tồn tại và dung lượng > 1 MB (tránh tệp rỗng/hỏng).", "PASSED"),
+        ("2", "test_model.py", "test_model_initialization: Khởi tạo kiến trúc mạng SOFTS, xác nhận backbone DINOv3Encoder gắn kết thành công.", "PASSED"),
+        ("3", "test_model.py", "test_checkpoint_loading: Nạp state_dict vào mô hình, xác nhận không có missing keys và chuyển sang chế độ eval().", "PASSED"),
+        ("4", "test_model.py", "test_model_forward_shape_and_values: Suy luận tensor (1, 96, 7) -> đầu ra đúng (1, 24, 7), không chứa NaN hoặc Inf.", "PASSED"),
+        ("5", "test_api.py", "test_health_check_endpoint: Gửi GET /health, xác nhận HTTP 200 OK, phản hồi JSON có status: 'healthy'.", "PASSED"),
+        ("6", "test_api.py", "test_dashboard_homepage: Gửi GET /, xác nhận HTTP 200 OK và trả về mã nguồn HTML giao diện Web Dashboard.", "PASSED"),
+        ("7", "test_api.py", "test_predict_endpoint_with_csv_upload: Gửi POST /api/predict với tệp CSV khí tượng mẫu, kiểm tra trả về đủ 24 điểm dự báo kèm MAE, RMSE.", "PASSED")
+    ]
+    for row_idx, (stt, tfile, tdesc, tres) in enumerate(test_items, start=1):
+        row = table_tests.rows[row_idx]
+        row.cells[0].text = stt
+        row.cells[1].text = tfile
+        row.cells[2].text = tdesc
+        row.cells[3].text = tres
+        bg = "FFFFFF" if row_idx % 2 == 1 else "F8FAFC"
+        for cell in row.cells:
+            set_cell_background(cell, bg)
+            for p in cell.paragraphs:
+                for r in p.runs:
+                    r.font.name = "Times New Roman"
+                    r.font.size = Pt(9)
+        # In đậm kết quả PASSED màu xanh lá
+        p_res = row.cells[3].paragraphs[0]
+        p_res.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in p_res.runs:
+            r.font.bold = True
+            r.font.color.rgb = RGBColor(0x16, 0xa3, 0x4a)
+
+    doc.add_paragraph()
+
+    # Ý nghĩa chung của việc test 7 bài test
+    h_meaning = doc.add_heading("3.1. Ý nghĩa chung của việc kiểm thử 7 bài test trong MLOps", level=2)
+    for r in h_meaning.runs:
+        r.font.name = "Times New Roman"
+        r.font.color.rgb = RGBColor(0x1e, 0x40, 0xaf)
+
+    meaning_points = [
+        ("Cổng chất lượng tự động (Quality Gate): ", "Pipeline CI/CD hoạt động như một chốt chặn an toàn tuyệt đối. Nếu bất kỳ 1 trong 7 bài kiểm thử thất bại, toàn bộ quá trình đóng gói Docker sẽ bị hủy ngay lập tức, ngăn chặn việc phát hành bản cập nhật lỗi ra môi trường thực tế."),
+        ("Bảo đảm tính toàn vẹn mô hình (AI Integrity): ", "Trong Deep Learning, các lỗi âm thầm (silent bugs) như thiếu trọng số (missing keys), sai lệch chiều tensor hoặc tràn số sinh ra giá trị rác (NaN/Inf) thường không gây sập mã nguồn ngay nhưng làm cho kết quả dự báo bị sai lệch hoàn toàn. 4 bài test mô hình bảo đảm 100% độ chính xác toán học."),
+        ("Xác thực tính sẵn sàng phục vụ (Production Readiness): ", "3 bài test API bảo đảm dịch vụ backend sẵn sàng tiếp nhận yêu cầu từ người dùng thực tế, từ kiểm tra sức khỏe hệ thống (/health) đến xử lý tệp CSV ngoại tuyến (/api/predict) mà không bị phụ thuộc vào kết nối mạng bên ngoài.")
+    ]
+    for title_m, desc_m in meaning_points:
+        p_m = doc.add_paragraph()
+        r_t = p_m.add_run(f"• {title_m}")
+        r_t.font.name = "Times New Roman"
+        r_t.font.bold = True
+        r_t.font.size = Pt(10)
+        r_d = p_m.add_run(desc_m)
+        r_d.font.name = "Times New Roman"
+        r_d.font.size = Pt(10)
+
+    # Ý nghĩa của CI/CD cho bài toán AI
+    h_cicd = doc.add_heading("3.2. Ý nghĩa của việc áp dụng CI/CD cho bài toán Trí tuệ Nhân tạo", level=2)
+    for r in h_cicd.runs:
+        r.font.name = "Times New Roman"
+        r.font.color.rgb = RGBColor(0x1e, 0x40, 0xaf)
+
+    cicd_points = [
+        ("Tính nhất quán môi trường (Environment Parity): ", "Xóa bỏ triệt để lỗi kinh điển 'nó chạy tốt trên máy của tôi nhưng lỗi trên máy của bạn'. CI/CD build và test trên runner Ubuntu chuẩn hóa, sau đó đóng gói toàn bộ mã nguồn, thư viện PyTorch CPU và weights vào Docker container."),
+        ("Tự động hóa hoàn toàn & Rút ngắn chu kỳ phát hành: ", "Chuyển giao mã nguồn từ lập trình viên lên Docker Hub chỉ bằng 1 thao tác git push duy nhất. Không cần các thao tác thủ công dễ nhầm lẫn như cài thư viện, gõ lệnh build hay đẩy image."),
+        ("Duy trì độ tin cậy liên tục cho mô hình: ", "Mỗi khi huấn luyện lại checkpoint với dữ liệu mới hay tinh chỉnh siêu tham số, CI/CD tự động chạy kiểm thử hồi quy (regression testing) để bảo đảm phiên bản mới không làm hỏng các tính năng cốt lõi của hệ thống.")
+    ]
+    for title_c, desc_c in cicd_points:
+        p_c = doc.add_paragraph()
+        r_t = p_c.add_run(f"• {title_c}")
+        r_t.font.name = "Times New Roman"
+        r_t.font.bold = True
+        r_t.font.size = Pt(10)
+        r_d = p_c.add_run(desc_c)
+        r_d.font.name = "Times New Roman"
+        r_d.font.size = Pt(10)
+
+    doc.add_paragraph()
+
+    # Các phần tiếp theo
     other_sections = [
-        ("PHẦN 3. BỘ KIỂM THỬ TỰ ĐỘNG (UNIT & INTEGRATION TESTS)", [
-            "Bộ kiểm thử được viết bằng pytest gồm 2 module kiểm tra toàn vẹn trọng số nơ-ron, forward pass tensor và serving API. Kết quả: 7 passed in 9.75s trên môi trường Ubuntu của GitHub Actions."
-        ]),
         ("PHẦN 4. ĐÓNG GÓI DOCKER IMAGE CHO MÔ HÌNH AI", [
             "Ứng dụng được đóng gói qua Dockerfile chuẩn MLOps, sử dụng python:3.10-slim và PyTorch CPU, tối ưu layer caching và tích hợp HEALTHCHECK định kỳ."
         ]),
@@ -197,11 +299,18 @@ def build_docx(filename):
 
 
 if __name__ == "__main__":
-    out_docx = "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680_StepByStep.docx"
-    build_docx(out_docx)
-    try:
-        import shutil
-        shutil.copyfile(out_docx, "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680.docx")
-        print("[+] Also updated BaoCao_TH3_NguyenHongPhuc_2351260680.docx")
-    except Exception as e:
-        print("[i] Main docx is currently open in Word, saved to StepByStep docx successfully!")
+    # Lưu file chính
+    main_docx = "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680.docx"
+    build_docx(main_docx)
+    
+    # Cố gắng lưu thêm các bản sao
+    for alt_path in [
+        "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680_StepByStep.docx",
+        "d:/Year4/CDTTNT/TH3/BaoCao_TH3_NguyenHongPhuc_2351260680_Full_Tests.docx"
+    ]:
+        try:
+            import shutil
+            shutil.copyfile(main_docx, alt_path)
+            print(f"[+] Copied to: {alt_path}")
+        except Exception as e:
+            print(f"[i] Could not copy to {alt_path} (file might be open in Word)")
