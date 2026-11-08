@@ -155,11 +155,25 @@ def build_docx(filename):
         ("PHẦN 4. ĐÓNG GÓI DOCKER IMAGE CHO MÔ HÌNH AI", [
             "Ứng dụng được đóng gói qua Dockerfile chuẩn MLOps, sử dụng python:3.10-slim và PyTorch CPU, tối ưu layer caching và tích hợp HEALTHCHECK định kỳ."
         ]),
-        ("PHẦN 5. HƯỚNG DẪN NGƯỜI DÙNG VẬN HÀNH DỊCH VỤ", [
-            "Lệnh kéo và chạy container từ Docker Hub:",
-            "   docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest",
-            "   docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest",
-            "Truy cập: http://localhost:7860"
+        ("PHẦN 5. HƯỚNG DẪN STEP-BY-STEP ĐỂ CLONE VÀ CHẠY DỰ ÁN", [
+            "Người khác (thầy cô, người phản biện hoặc người dùng mới) có thể vận hành hệ thống theo 1 trong 3 phương thức linh hoạt:",
+            "• Phương thức 1: Chạy trực tiếp từ Docker Hub (Nhanh nhất — Không cần cài Python):",
+            "     docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest",
+            "     docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest",
+            "• Phương thức 2: Clone repository và Tự build Docker Image cục bộ:",
+            "     git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git",
+            "     cd hanoi-pm25-ai-cicd",
+            "     docker build -t hanoi-pm25-local:latest .",
+            "     docker run -d --name hanoi_local_app -p 7860:7860 hanoi-pm25-local:latest",
+            "• Phương thức 3: Clone repository và Chạy với môi trường Python cục bộ:",
+            "     git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git",
+            "     cd hanoi-pm25-ai-cicd",
+            "     python -m venv venv && venv\\Scripts\\activate",
+            "     pip install -r requirements.txt",
+            "     python -m pytest tests/ -v",
+            "     python -m uvicorn app:app --host 0.0.0.0 --port 7860",
+            "• Truy cập Web Dashboard: http://localhost:7860",
+            "• Kiểm tra API Healthcheck: curl http://localhost:7860/health"
         ]),
         ("PHẦN 6. KẾT LUẬN", [
             "Bài thực hành 3 đã hoàn thành xuất sắc 100% mục tiêu: tự động hóa CI/CD cho mô hình AI và đóng gói xuất bản Docker image công khai lên Docker Hub."

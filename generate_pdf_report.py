@@ -404,25 +404,48 @@ CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]"""
     story.append(Spacer(1, 8))
 
     # ========================== PHẦN 5 ==========================
-    story.append(Paragraph("PHẦN 5. HƯỚNG DẪN NGƯỜI DÙNG VẬN HÀNH DỊCH VỤ DỰ BÁO AI", h1_style))
+    story.append(Paragraph("PHẦN 5. HƯỚNG DẪN STEP-BY-STEP ĐỂ CLONE VÀ CHẠY DỰ ÁN", h1_style))
     story.append(Paragraph(
-        "Bất kỳ ai khi có Docker đều có thể vận hành hệ thống dự báo AI của bạn chỉ với 2 câu lệnh:",
+        "Người khác (thầy cô, người phản biện hoặc người dùng mới) có thể clone và vận hành hệ thống theo 1 trong 3 phương thức linh hoạt:",
         body_style
     ))
-    step1_code = "docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest\ndocker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest"
-    story.append(Table([[Paragraph(f"<pre><b>{step1_code}</b></pre>", code_style)]], colWidths=[499], style=[
+
+    story.append(Paragraph("<b>Phương thức 1: Chạy trực tiếp từ Docker Hub (Nhanh nhất — Không cần cài Python)</b>", h2_style))
+    p1_code = "docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest\ndocker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest"
+    story.append(Table([[Paragraph(f"<pre><b>{p1_code}</b></pre>", code_style)]], colWidths=[499], style=[
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#0f172a")),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#38bdf8")),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+        ('TOPPADDING', (0, 0), (-1, -1), 3), ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(Spacer(1, 4))
+
+    story.append(Paragraph("<b>Phương thức 2: Clone repository và Tự build Docker Image cục bộ</b>", h2_style))
+    p2_code = "git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git\ncd hanoi-pm25-ai-cicd\ndocker build -t hanoi-pm25-local:latest .\ndocker run -d --name hanoi_local_app -p 7860:7860 hanoi-pm25-local:latest"
+    story.append(Table([[Paragraph(f"<pre><b>{p2_code}</b></pre>", code_style)]], colWidths=[499], style=[
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#0f172a")),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#38bdf8")),
+        ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+        ('TOPPADDING', (0, 0), (-1, -1), 3), ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("<b>Phương thức 3: Clone repository và Chạy với môi trường Python cục bộ</b>", h2_style))
+    p3_code = "git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git\ncd hanoi-pm25-ai-cicd\npython -m venv venv && venv\\Scripts\\activate\npip install -r requirements.txt\npython -m pytest tests/ -v\npython -m uvicorn app:app --host 0.0.0.0 --port 7860"
+    story.append(Table([[Paragraph(f"<pre><b>{p3_code}</b></pre>", code_style)]], colWidths=[499], style=[
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#0f172a")),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#38bdf8")),
+        ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+        ('TOPPADDING', (0, 0), (-1, -1), 3), ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    story.append(Spacer(1, 4))
+
     story.append(Paragraph(
-        "• Truy cập Web Dashboard: Mở trình duyệt tại <u>http://localhost:7860</u> để sử dụng giao diện trực quan hóa, lựa chọn trạm quan trắc Hà Nội và xem kết quả dự báo 24 giờ tiếp theo.<br/>"
-        "• Kiểm tra API Sức khỏe: Gọi <code>curl http://localhost:7860/health</code>, hệ thống trả về JSON xác nhận mô hình SOFTS-DINOv3 đang hoạt động ổn định.",
+        "• <b>Nghiệm thu Web Dashboard:</b> Mở trình duyệt tại <u>http://localhost:7860</u> để sử dụng giao diện trực quan hóa, lựa chọn trạm quan trắc Hà Nội và xem kết quả dự báo 24 giờ tiếp theo.<br/>"
+        "• <b>Kiểm tra API Sức khỏe:</b> Gọi <code>curl http://localhost:7860/health</code>, hệ thống trả về JSON xác nhận mô hình SOFTS-DINOv3 đang hoạt động ổn định.",
         bullet_style
     ))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     # ========================== PHẦN 6 ==========================
     story.append(Paragraph("PHẦN 6. KẾT LUẬN & ĐÁNH GIÁ HIỆU QUẢ", h1_style))

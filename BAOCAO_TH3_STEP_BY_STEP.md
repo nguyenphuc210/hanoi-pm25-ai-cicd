@@ -260,23 +260,83 @@ CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
 
 ---
 
-## PHẦN 4. HƯỚNG DẪN NGƯỜI DÙNG VẬN HÀNH DỊCH VỤ
+## PHẦN 4. HƯỚNG DẪN STEP-BY-STEP ĐỂ CLONE VÀ CHẠY DỰ ÁN (FOR USERS & REVIEWERS)
 
-Bất kỳ ai khi có Docker đều có thể vận hành hệ thống dự báo AI của bạn chỉ với 2 câu lệnh:
+Để người khác (thầy cô chấm bài, người đánh giá hoặc người dùng mới) có thể chạy thử nghiệm dự án sau khi clone về máy, dự án hỗ trợ 3 phương thức vận hành linh hoạt:
 
+### Cách 1: Chạy trực tiếp từ Docker Hub (Nhanh nhất — Không cần cài Python)
+Không cần tải mã nguồn hay cài đặt môi trường lập trình, chỉ cần máy có Docker:
 ```bash
-# 1. Kéo Image công khai từ Docker Hub về máy
+# 1. Kéo image chính thức từ Docker Hub
 docker pull phucnguyen210/hanoi-pm25-softs-dinov3:latest
 
-# 2. Khởi chạy Container serving (cổng 7860)
+# 2. Khởi chạy container phục vụ dự báo trên cổng 7860
 docker run -d --name hanoi_pm25_service -p 7860:7860 phucnguyen210/hanoi-pm25-softs-dinov3:latest
 
-# 3. Kiểm tra trạng thái sức khỏe
-curl http://localhost:7860/health
-
-# 4. Mở Dashboard giao diện người dùng trên trình duyệt:
-# http://localhost:7860
+# 3. Mở trình duyệt web truy cập: http://localhost:7860
 ```
+
+### Cách 2: Clone repository về máy và Tự đóng gói Docker Image
+Dành cho người muốn kiểm chứng mã nguồn và tự đóng gói container tại chỗ:
+```bash
+# Bước 1: Clone kho lưu trữ từ GitHub
+git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git
+cd hanoi-pm25-ai-cicd
+
+# Bước 2: Tự build Docker Image cục bộ
+docker build -t hanoi-pm25-local:latest .
+
+# Bước 3: Khởi chạy container từ image vừa build
+docker run -d --name hanoi_pm25_local_service -p 7860:7860 hanoi-pm25-local:latest
+
+# Bước 4: Mở trình duyệt web truy cập: http://localhost:7860
+```
+
+### Cách 3: Clone repository về máy và Chạy trực tiếp với Python (Virtual Environment)
+Dành cho lập trình viên muốn xem mã nguồn, chạy kiểm thử hoặc chỉnh sửa thuật toán:
+```bash
+# Bước 1: Clone kho lưu trữ
+git clone https://github.com/nguyenphuc210/hanoi-pm25-ai-cicd.git
+cd hanoi-pm25-ai-cicd
+
+# Bước 2: Tạo và kích hoạt môi trường ảo (Virtualenv)
+python -m venv venv
+
+# Kích hoạt trên Windows:
+venv\Scripts\activate
+# (Hoặc trên Linux/macOS: source venv/bin/activate)
+
+# Bước 3: Cài đặt thư viện phụ thuộc (đã tối ưu PyTorch CPU ~180MB)
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Bước 4: Chạy kiểm thử tự động để xác nhận chất lượng mô hình
+python -m pytest tests/ -v
+# Kết quả: 7 passed in ~10s
+
+# Bước 5: Khởi chạy dịch vụ FastAPI Web Serving
+python -m uvicorn app:app --host 0.0.0.0 --port 7860
+
+# Bước 6: Mở trình duyệt web truy cập: http://localhost:7860
+```
+
+### Hướng dẫn kiểm tra và nghiệm thu kết quả
+1. **Trực quan hóa Web Dashboard:** Mở `http://localhost:7860`, chọn trạm quan trắc (Đống Đa, Cầu Giấy, Hoàn Kiếm, v.v.) và bấm nút **`▶ RUN AI INFERENCE`** để xem đường đồ thị dự báo 24 giờ tiếp theo.
+2. **Kiểm tra API giám sát sức khỏe:**
+   ```bash
+   curl http://localhost:7860/health
+   ```
+   *Kết quả JSON trả về:*
+   ```json
+   {
+     "status": "healthy",
+     "service": "Hanoi PM2.5 Air Quality Forecasting",
+     "model": "SOFTS with DINOv3 ViT Backbone",
+     "backend": "FastAPI + PyTorch CPU",
+     "stations_count": 10
+   }
+   ```
+3. **Tài liệu API tương tác tự động (Swagger UI):** Truy cập `http://localhost:7860/docs` để kiểm tra trực tiếp các schema và endpoint.
 
 ---
 
